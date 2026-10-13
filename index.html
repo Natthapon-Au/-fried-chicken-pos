@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="th"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>POS ร้านไก่ทอด</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<title>POS ร้านไก่ทอด</title><script src="config.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;700&display=swap">
 <style>
 :root{--bg:#FBFAF6;--card:#fff;--ink:#2A1B14;--mute:#7a6a60;--line:#e9e2d6;--gold:#E8A317;--chili:#C62828;--ok:#2E7D32;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -63,6 +63,8 @@ nav button.on{color:var(--ink);font-weight:700;box-shadow:inset 0 3px 0 var(--go
 .mini{display:flex;gap:6px;margin-top:6px}.mini label{font-size:12px;color:var(--mute);flex:1;min-width:0}.mini input{width:100%;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;padding:0 6px}
 .fl{display:block;margin-bottom:10px;font-size:14px;color:var(--mute)}.fl input:not([type=checkbox]){width:100%;height:44px;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;padding:0 10px}
 @media print{body>*:not(#sheet){display:none!important}#sheet{position:static;background:none;display:block!important}#sheet .box{background:none;padding:0}#sheet .box>.row button,#sheet .big{display:none}}
+.im{width:100%;height:76px;object-fit:cover;border-radius:10px;margin-bottom:4px;display:block}
+.thumb{width:64px;height:64px;border:2px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13px;overflow:hidden;cursor:pointer;flex:none}.thumb img{width:100%;height:100%;object-fit:cover}
 </style></head>
 <body>
 <header><h1>🍗 ร้านไก่ทอด</h1><p id="today"></p></header>
@@ -96,12 +98,12 @@ const count=()=>Object.values(cart).reduce((a,b)=>a+b,0);
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',2200)}
 
 function vSell(){return '<div class="row" style="margin-bottom:10px"><input id="bc" class="fl" style="flex:1;height:48px;margin:0;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit;padding:0 12px" placeholder="สแกนหรือพิมพ์บาร์โค้ด แล้วกด Enter" inputmode="numeric"><button class="btn" style="height:48px" data-a="cam">กล้อง</button></div><div class="grid">'+S.products.map(p=>{const q=cart[p.id]||0,left=p.stock-q;
-return `<div class="p ${left<=0?'out':''} ${q?'in':''}"><button data-a="add" data-id="${p.id}" ${left<=0?'disabled':''}><b>${esc(p.name)}</b><span class="pr">฿${fmt(p.price)}</span><small>${left<=0?'หมด':'เหลือ '+left}</small></button>${q?`<button class="minus" data-a="sub" data-id="${p.id}">− ${q}</button>`:''}</div>`}).join('')+'</div>'+(S.products.length?'':'<p class="empty">ยังไม่มีสินค้า ไปเพิ่มที่แท็บสต็อก</p>')}
+return `<div class="p ${left<=0?'out':''} ${q?'in':''}"><button data-a="add" data-id="${p.id}" ${left<=0?'disabled':''}>${p.img?`<img class="im" src="${p.img}" alt="">`:''}<b>${esc(p.name)}</b><span class="pr">฿${fmt(p.price)}</span><small>${left<=0?'หมด':'เหลือ '+left}</small></button>${q?`<button class="minus" data-a="sub" data-id="${p.id}">− ${q}</button>`:''}</div>`}).join('')+'</div>'+(S.products.length?'':'<p class="empty">ยังไม่มีสินค้า ไปเพิ่มที่แท็บสต็อก</p>')}
 
 function vStock(){const low=S.products.filter(p=>p.stock<=LOW).length;
 return `<div class="card"><b>เพิ่มสินค้าใหม่</b><div class="f" style="margin-top:8px"><input class="w" id="nn" placeholder="ชื่อสินค้า"><input id="np" type="number" inputmode="numeric" placeholder="ราคาขาย"><input id="nc" type="number" inputmode="numeric" placeholder="ต้นทุน"><input id="ns" type="number" inputmode="numeric" placeholder="จำนวน"><input class="w" id="nb" placeholder="บาร์โค้ด (ไม่บังคับ)"><button class="btn pri" style="grid-column:1/-1" data-a="addp">เพิ่มสินค้า</button></div></div>`+
 (low?`<p style="margin:4px 4px 10px;color:var(--chili);font-weight:500">ใกล้หมด ${low} รายการ</p>`:'')+
-S.products.map(p=>`<div class="card row" style="flex-wrap:wrap"><div class="grow" style="flex-basis:100%"><b>${esc(p.name)}</b>${p.stock<=LOW?'<span class="tag">'+(p.stock?'ใกล้หมด':'หมด')+'</span>':''}<div class="mini"><label>ขาย<input type="number" inputmode="numeric" value="${p.price}" data-f="price" data-id="${p.id}"></label><label>ทุน<input type="number" inputmode="numeric" value="${p.cost}" data-f="cost" data-id="${p.id}"></label><label>บาร์โค้ด<input value="${esc(p.bc)}" data-f="bc" data-id="${p.id}"></label></div></div><div class="step"><button data-a="dec" data-id="${p.id}">−</button><input type="number" inputmode="numeric" min="0" value="${p.stock}" data-f="stock" data-id="${p.id}" aria-label="จำนวนคงเหลือ"><button data-a="inc" data-id="${p.id}">+</button><button data-a="inc10" data-id="${p.id}">+10</button></div></div><div style="text-align:right;margin:-4px 0 10px"><button class="btn red" data-a="del" data-id="${p.id}">${pend==='d'+p.id?'แตะอีกครั้งเพื่อลบ':'ลบสินค้า'}</button></div>`).join('')}
+S.products.map(p=>`<div class="card row" style="flex-wrap:wrap"><label class="thumb">${p.img?`<img src="${p.img}" alt="">`:'+ รูป'}<input type="file" accept="image/*" data-f="img" data-id="${p.id}" hidden></label><div class="grow" style="flex:1"><b>${esc(p.name)}</b>${p.stock<=LOW?'<span class="tag">'+(p.stock?'ใกล้หมด':'หมด')+'</span>':''}<div class="mini"><label>ขาย<input type="number" inputmode="numeric" value="${p.price}" data-f="price" data-id="${p.id}"></label><label>ทุน<input type="number" inputmode="numeric" value="${p.cost}" data-f="cost" data-id="${p.id}"></label><label>บาร์โค้ด<input value="${esc(p.bc)}" data-f="bc" data-id="${p.id}"></label></div></div><div class="step"><button data-a="dec" data-id="${p.id}">−</button><input type="number" inputmode="numeric" min="0" value="${p.stock}" data-f="stock" data-id="${p.id}" aria-label="จำนวนคงเหลือ"><button data-a="inc" data-id="${p.id}">+</button><button data-a="inc10" data-id="${p.id}">+10</button></div></div><div style="text-align:right;margin:-4px 0 10px">${p.img?`<button class="btn" data-a="rmimg" data-id="${p.id}">ลบรูป</button> `:''}<button class="btn red" data-a="del" data-id="${p.id}">${pend==='d'+p.id?'แตะอีกครั้งเพื่อลบ':'ลบสินค้า'}</button></div>`).join('')}
 
 function vSum(){const ss=S.sales.filter(s=>dk(s.t)===day).sort((a,b)=>b.t-a.t),sum=ss.reduce((a,s)=>a+s.total,0);
 const it={};ss.forEach(s=>s.items.forEach(i=>{it[i.name]=it[i.name]||{q:0,v:0};it[i.name].q+=i.qty;it[i.name].v+=i.qty*i.price}));
@@ -218,12 +220,44 @@ if(f==='stock'){const df=Math.max(0,parseInt(t.value)||0)-p.stock;if(df)await wr
 else if(f==='price'||f==='cost')await C.doc(id).update({[f]:Math.max(0,+t.value||0)});
 else if(f==='bc')await C.doc(id).update({bc:t.value.trim()});
 else await DB.doc('config/main').set({...S.set,[t.dataset.k]:t.type==='checkbox'?t.checked:t.value.trim()})})().catch(()=>toast('บันทึกไม่สำเร็จ'))},true);
-(async()=>{try{if(typeof claude==='undefined'){setSt('ไม่ได้เชื่อมฐานข้อมูล');return}
-const[db,user]=await Promise.all([claude.use('db'),claude.use('user')]);if(!db){setSt('ไม่ได้เชื่อมฐานข้อมูล (ต้องเข้าสู่ระบบ claude.ai)');return}
-DB=db;ro=user?(await Promise.resolve(user.can('data.write')))===false:false;
-const er=x=>{setSt('เชื่อมต่อขัดข้อง ('+(x&&x.code||'error')+')')};
+/* ---- Supabase backend (replaces claude.ai db) ---- */
+const CF=window.POS_CONFIG||{},SB_URL=CF.url||'PASTE_PROJECT_URL',SB_KEY=CF.key||'PASTE_PUBLISHABLE_KEY';
+function mkDB(sb){const cache={},ls=[];let ch=null;
+const rows=c=>cache[c]||(cache[c]=new Map()),emit=c=>ls.filter(l=>l.c===c).forEach(l=>l.fire());
+async function load(c){let all=[],from=0;for(;;){const{data,error}=await sb.from('kv').select('id,data').eq('collection',c).range(from,from+999);if(error)throw error;all=all.concat(data);if(data.length<1000)break;from+=1000}const m=new Map();all.forEach(r=>m.set(r.id,r.data));cache[c]=m;emit(c)}
+function chan(){if(ch)return;ch=sb.channel('kv').on('postgres_changes',{event:'*',schema:'public',table:'kv'},p=>{const r=p.eventType==='DELETE'?p.old:p.new;if(!r||!r.collection)return;if(p.eventType==='DELETE')rows(r.collection).delete(r.id);else rows(r.collection).set(r.id,r.data);emit(r.collection)}).subscribe(st=>{if(st==='SUBSCRIBED')Object.keys(cache).forEach(c=>load(c).catch(()=>{}))});
+setInterval(()=>{if(document.visibilityState==='visible')Object.keys(cache).forEach(c=>load(c).catch(()=>{}))},45000)}
+function sub(c,fire,err){const l={c,fire};ls.push(l);chan();if(cache[c])fire();else load(c).catch(e=>err&&err({code:e.code||'error'}));return()=>{const i=ls.indexOf(l);if(i>=0)ls.splice(i,1)}}
+const dsnap=(id,d)=>({id,exists:d!==undefined,data:()=>d,metadata:{}});
+const qsnap=c=>{const docs=[...rows(c)].map(([id,d])=>dsnap(id,d));return{docs,size:docs.length,empty:!docs.length}};
+const ref=(c,id)=>({id,path:c+'/'+id,
+async get(){const{data,error}=await sb.from('kv').select('data').eq('collection',c).eq('id',id).maybeSingle();if(error)throw error;return dsnap(id,data?data.data:undefined)},
+async set(d){const{error}=await sb.from('kv').upsert({collection:c,id,data:d});if(error)throw error;rows(c).set(id,d);emit(c)},
+async update(o){const cur=(await this.get()).data()||{};await this.set({...cur,...o})},
+async delete(){const{error}=await sb.from('kv').delete().eq('collection',c).eq('id',id);if(error)throw error;rows(c).delete(id);emit(c)},
+onSnapshot(next,err){return sub(c,()=>next(dsnap(id,rows(c).get(id))),err)}});
+const col=c=>({path:c,doc:id=>ref(c,id||'x'+Math.random().toString(36).slice(2,10)),
+async get(){if(!cache[c])await load(c);return qsnap(c)},
+onSnapshot(next,err){return sub(c,()=>next(qsnap(c)),err)}});
+return{collection:col,doc:p=>{const[c,id]=p.split('/');return ref(c,id)}}}
+function loginUI(sb,onOk){const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px';
+d.innerHTML='<div class="card" style="width:100%;max-width:360px"><h2 style="margin-top:0">\u0e40\u0e02\u0e49\u0e32\u0e2a\u0e39\u0e48\u0e23\u0e30\u0e1a\u0e1a POS</h2><label class="fl">\u0e2d\u0e35\u0e40\u0e21\u0e25<input id="em" type="email" autocomplete="username"></label><label class="fl">\u0e23\u0e2b\u0e31\u0e2a\u0e1c\u0e48\u0e32\u0e19<input id="pw" type="password" autocomplete="current-password"></label><p id="le" style="color:var(--chili);min-height:1.4em"></p><button class="btn pri" id="lb" style="width:100%;height:50px">\u0e40\u0e02\u0e49\u0e32\u0e2a\u0e39\u0e48\u0e23\u0e30\u0e1a\u0e1a</button></div>';
+document.body.appendChild(d);
+const go=async()=>{const{error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error){$('#le').textContent='\u0e2d\u0e35\u0e40\u0e21\u0e25\u0e2b\u0e23\u0e37\u0e2d\u0e23\u0e2b\u0e31\u0e2a\u0e1c\u0e48\u0e32\u0e19\u0e44\u0e21\u0e48\u0e16\u0e39\u0e01\u0e15\u0e49\u0e2d\u0e07';return}d.remove();onOk()};
+$('#lb').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()}}
+function start(sb){DB=mkDB(sb);ro=false;
+const er=x=>{setSt('\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d\u0e02\u0e31\u0e14\u0e02\u0e49\u0e2d\u0e07 ('+(x&&x.code||'error')+')')};
 DB.collection('products').onSnapshot(s=>{prods={};s.docs.forEach(d=>prods[d.id]=d.data());refresh()},er);
-DB.collection('ledger').onSnapshot(s=>{led={};s.docs.forEach(d=>led[d.id]=d.data());if(!ready){ready=true;setSt(ro?'ดูข้อมูลได้อย่างเดียว':'ซิงก์แล้ว · เครื่อง '+dev)}refresh()},er);
-DB.doc('config/main').onSnapshot(s=>{cfg=s.data()||{};refresh()},er)}catch(e){setSt('ไม่ได้เชื่อมฐานข้อมูล')}})();
+DB.collection('ledger').onSnapshot(s=>{led={};s.docs.forEach(d=>led[d.id]=d.data());if(!ready){ready=true;setSt('\u0e0b\u0e34\u0e07\u0e01\u0e4c\u0e41\u0e25\u0e49\u0e27 \u00b7 \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 '+dev)}refresh()},er);
+DB.doc('config/main').onSnapshot(s=>{cfg=s.data()||{};refresh()},er);
+const h=document.querySelector('header'),lo=document.createElement('button');lo.textContent='\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a';lo.className='btn';lo.style.cssText='position:absolute;top:12px;right:12px;height:36px;min-width:0;font-size:13px';lo.onclick=async()=>{await sb.auth.signOut();location.reload()};h.style.position='relative';h.appendChild(lo)}
+(async()=>{if(typeof supabase==='undefined'||SB_URL.startsWith('PASTE')){setSt('\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32 Supabase (\u0e14\u0e39\u0e02\u0e31\u0e49\u0e19\u0e15\u0e2d\u0e19\u0e43\u0e19\u0e04\u0e39\u0e48\u0e21\u0e37\u0e2d)');return}
+const sb=supabase.createClient(SB_URL,SB_KEY),{data}=await sb.auth.getSession();if(data.session)start(sb);else loginUI(sb,()=>start(sb))})();
+/* ---- product photos ---- */
+function shrink(file,max){max=max||360;return new Promise((res,rej)=>{const im=new Image(),u=URL.createObjectURL(file);im.onload=()=>{const r=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*r);c.height=Math.round(im.height*r);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',.72))};im.onerror=()=>rej(new Error('img'));im.src=u})}
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.f!=='img')return;e.stopImmediatePropagation();const f=t.files[0];if(!f||!ok())return;
+shrink(f).then(d=>DB.collection('products').doc(t.dataset.id).update({img:d})).then(()=>toast('\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e23\u0e39\u0e1b\u0e41\u0e25\u0e49\u0e27')).catch(()=>toast('\u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e23\u0e39\u0e1b\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08'))},true);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a="rmimg"]');if(!b)return;e.stopImmediatePropagation();if(!ok())return;
+DB.collection('products').doc(b.dataset.id).update({img:''}).catch(()=>toast('\u0e25\u0e1a\u0e23\u0e39\u0e1b\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08'))},true);
 render();
 </script></body></html>
