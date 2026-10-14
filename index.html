@@ -247,10 +247,10 @@ d.innerHTML='<div class="card" style="width:100%;max-width:360px"><h2 style="mar
 document.body.appendChild(d);
 const go=async()=>{const{error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error){$('#le').textContent='\u0e2d\u0e35\u0e40\u0e21\u0e25\u0e2b\u0e23\u0e37\u0e2d\u0e23\u0e2b\u0e31\u0e2a\u0e1c\u0e48\u0e32\u0e19\u0e44\u0e21\u0e48\u0e16\u0e39\u0e01\u0e15\u0e49\u0e2d\u0e07';return}d.remove();onOk()};
 $('#lb').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()}}
-function start(sb){DB=mkDB(sb);ro=false;
+async function start(sb){DB=mkDB(sb);ro=false;try{const r=await sb.rpc('is_editor');ro=r.data===false}catch(e){}if(ro){tab='sum';const t0=document.querySelector('.tab[data-id="sell"]');if(t0)t0.style.display='none'}
 const er=x=>{setSt('\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d\u0e02\u0e31\u0e14\u0e02\u0e49\u0e2d\u0e07 ('+(x&&x.code||'error')+')')};
 DB.collection('products').onSnapshot(s=>{prods={};s.docs.forEach(d=>prods[d.id]=d.data());refresh()},er);
-DB.collection('ledger').onSnapshot(s=>{led={};s.docs.forEach(d=>led[d.id]=d.data());if(!ready){ready=true;setSt('\u0e0b\u0e34\u0e07\u0e01\u0e4c\u0e41\u0e25\u0e49\u0e27 \u00b7 \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 '+dev)}refresh()},er);
+DB.collection('ledger').onSnapshot(s=>{led={};s.docs.forEach(d=>led[d.id]=d.data());if(!ready){ready=true;setSt(ro?'\u0e14\u0e39\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e40\u0e14\u0e35\u0e22\u0e27':'\u0e0b\u0e34\u0e07\u0e01\u0e4c\u0e41\u0e25\u0e49\u0e27 \u00b7 \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 '+dev)}refresh()},er);
 DB.doc('config/main').onSnapshot(s=>{cfg=s.data()||{};refresh()},er);DB.collection('expenses').onSnapshot(s=>{exps={};s.docs.forEach(d=>exps[d.id]=d.data());refresh()},er);
 const h=document.querySelector('header'),lo=document.createElement('button');lo.textContent='\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a';lo.className='btn';lo.style.cssText='position:absolute;top:12px;right:12px;height:36px;min-width:0;font-size:13px';lo.onclick=async()=>{await sb.auth.signOut();location.reload()};h.style.position='relative';h.appendChild(lo)}
 (async()=>{if(typeof supabase==='undefined'||SB_URL.startsWith('PASTE')){setSt('\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32 Supabase (\u0e14\u0e39\u0e02\u0e31\u0e49\u0e19\u0e15\u0e2d\u0e19\u0e43\u0e19\u0e04\u0e39\u0e48\u0e21\u0e37\u0e2d)');return}
@@ -274,5 +274,8 @@ else{const e=effExp(day),cur={};EXP.forEach(([c])=>{if(c!=='mk')cur[c]=e?(+e.v[c
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a="expcopy"]');if(!b)return;e.stopImmediatePropagation();if(!ok())return;
 const prev=Object.keys(exps).filter(k=>k<day).sort().pop();if(!prev){toast('ยังไม่มีข้อมูลวันก่อนหน้า');return}
 DB.collection('expenses').doc(day).set({...exps[prev]}).then(()=>toast('คัดลอกจากวันที่ '+prev)).catch(()=>toast('บันทึกไม่สำเร็จ'))},true);
+/* ---- read-only accounts ---- */
+function roUI(){if(!ro)return;document.querySelectorAll('#app input').forEach(i=>{if(i.dataset.f!=='day')i.disabled=true});document.querySelectorAll('#app [data-a]').forEach(b=>{if(!['per','rc'].includes(b.dataset.a))b.style.display='none'})}
+const _render=render;render=function(){_render();roUI()};
 render();
 </script></body></html>
