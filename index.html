@@ -200,7 +200,7 @@ all.forEach((s,i)=>{s.no=i+1;if(!vd.has(s.id)){S.sales.push(s);s.items.forEach(i
 S.products.forEach(p=>{p.stock=(p.init||0)+(adj[p.id]||0)-(sold[p.id]||0);p.cost=p.cost||0;p.bc=p.bc||''});
 for(const id in cart)if(!P(id))delete cart[id]}
 function refresh(){rebuild();const a=document.activeElement;if(a&&a.matches&&a.matches('#app input'))return;render()}
-const ok=()=>{if(!DB||!ready){toast('ยังไม่ได้เชื่อมฐานข้อมูล');return false}if(ro){toast('บัญชีนี้ดูข้อมูลได้อย่างเดียว');return false}return true};
+const ok=(sell)=>{if(!DB||!ready){toast('ยังไม่ได้เชื่อมฐานข้อมูล');return false}if(ro||(cashier&&!sell)){toast('บัญชีนี้ไม่มีสิทธิ์แก้ไขข้อมูล');return false}return true};
 const wr=fn=>q=q.then(async()=>{const id=dk(Date.now())+'_'+dev,d=JSON.parse(JSON.stringify(mine[id]||led[id]||{day:dk(Date.now()),dev,sales:[],adj:[],voids:[]}));fn(d);try{await DB.collection('ledger').doc(id).set(d);mine[id]=d;return true}catch(e){toast('บันทึกไม่สำเร็จ ('+(e.code||'error')+')');return false}});
 async function pay2(){const t=total(),m=pm,cash=m==='cash'?(+$('#cash').value||0):t;if(!t||cash<t)return;$('#payb').disabled=true;
 const items=Object.entries(cart).map(([id,qt])=>{const p=P(id);return{id,name:p.name,price:p.price,cost:p.cost,qty:qt}});
@@ -208,7 +208,7 @@ const sale={id:'s'+Date.now().toString(36)+dev,t:Date.now(),items,total:t,cash,p
 if(!(await wr(d=>d.sales.push(sale)))){$('#payb').disabled=false;return}
 rcp={...sale,no:nAll+1};cart={};pm='cash';day=dk(Date.now());showRcp(cash-t)}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
-if(!['inc','inc10','dec','addp','del','void','pay','reset'].includes(a))return;e.stopPropagation();e.stopImmediatePropagation();if(!ok())return;
+if(!['inc','inc10','dec','addp','del','void','pay','reset'].includes(a))return;e.stopPropagation();e.stopImmediatePropagation();if(!ok(a==='pay'))return;
 (async()=>{const C=DB.collection('products');
 if(a==='inc'||a==='inc10'||a==='dec'){if(a==='dec'&&P(id).stock<=0)return;await wr(d=>d.adj.push({pid:id,d:a==='inc'?1:a==='inc10'?10:-1,t:Date.now()}))}
 else if(a==='addp'){const n=$('#nn').value.trim(),pr=$('#np').value;if(!n||pr===''){toast('กรอกชื่อและราคาก่อน');return}await C.doc('p'+Date.now().toString(36)).set({name:n,price:+pr,cost:+$('#nc').value||0,bc:$('#nb').value.trim(),init:parseInt($('#ns').value)||0,o:Date.now()})}
@@ -247,10 +247,10 @@ d.innerHTML='<div class="card" style="width:100%;max-width:360px"><h2 style="mar
 document.body.appendChild(d);
 const go=async()=>{const{error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});if(error){$('#le').textContent='\u0e2d\u0e35\u0e40\u0e21\u0e25\u0e2b\u0e23\u0e37\u0e2d\u0e23\u0e2b\u0e31\u0e2a\u0e1c\u0e48\u0e32\u0e19\u0e44\u0e21\u0e48\u0e16\u0e39\u0e01\u0e15\u0e49\u0e2d\u0e07';return}d.remove();onOk()};
 $('#lb').onclick=go;$('#pw').onkeydown=e=>{if(e.key==='Enter')go()}}
-async function start(sb){DB=mkDB(sb);ro=false;try{const r=await sb.rpc('is_editor');ro=r.data===false}catch(e){}if(ro){tab='sum';const t0=document.querySelector('.tab[data-id="sell"]');if(t0)t0.style.display='none'}
+async function start(sb){DB=mkDB(sb);ro=false;try{const r=await sb.rpc('my_role');ro=r.data==='viewer';cashier=r.data==='cashier'}catch(e){}if(ro){tab='sum';const t0=document.querySelector('.tab[data-id="sell"]');if(t0)t0.style.display='none'}
 const er=x=>{setSt('\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d\u0e02\u0e31\u0e14\u0e02\u0e49\u0e2d\u0e07 ('+(x&&x.code||'error')+')')};
 DB.collection('products').onSnapshot(s=>{prods={};s.docs.forEach(d=>prods[d.id]=d.data());refresh()},er);
-DB.collection('ledger').onSnapshot(s=>{led={};s.docs.forEach(d=>led[d.id]=d.data());if(!ready){ready=true;setSt(ro?'\u0e14\u0e39\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e2d\u0e22\u0e48\u0e32\u0e07\u0e40\u0e14\u0e35\u0e22\u0e27':'\u0e0b\u0e34\u0e07\u0e01\u0e4c\u0e41\u0e25\u0e49\u0e27 \u00b7 \u0e40\u0e04\u0e23\u0e37\u0e48\u0e2d\u0e07 '+dev)}refresh()},er);
+DB.collection('ledger').onSnapshot(s=>{led={};s.docs.forEach(d=>led[d.id]=d.data());if(!ready){ready=true;setSt(ro?'ดูข้อมูลอย่างเดียว':(cashier?'พนักงานขาย · ':'')+'ซิงก์แล้ว · เครื่อง '+dev)}refresh()},er);
 DB.doc('config/main').onSnapshot(s=>{cfg=s.data()||{};refresh()},er);DB.collection('expenses').onSnapshot(s=>{exps={};s.docs.forEach(d=>exps[d.id]=d.data());refresh()},er);
 const h=document.querySelector('header'),lo=document.createElement('button');lo.textContent='\u0e2d\u0e2d\u0e01\u0e08\u0e32\u0e01\u0e23\u0e30\u0e1a\u0e1a';lo.className='btn';lo.style.cssText='position:absolute;top:12px;right:12px;height:36px;min-width:0;font-size:13px';lo.onclick=async()=>{await sb.auth.signOut();location.reload()};h.style.position='relative';h.appendChild(lo)}
 (async()=>{if(typeof supabase==='undefined'||SB_URL.startsWith('PASTE')){setSt('\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32 Supabase (\u0e14\u0e39\u0e02\u0e31\u0e49\u0e19\u0e15\u0e2d\u0e19\u0e43\u0e19\u0e04\u0e39\u0e48\u0e21\u0e37\u0e2d)');return}
@@ -275,7 +275,8 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-a="expcopy
 const prev=Object.keys(exps).filter(k=>k<day).sort().pop();if(!prev){toast('ยังไม่มีข้อมูลวันก่อนหน้า');return}
 DB.collection('expenses').doc(day).set({...exps[prev]}).then(()=>toast('คัดลอกจากวันที่ '+prev)).catch(()=>toast('บันทึกไม่สำเร็จ'))},true);
 /* ---- read-only accounts ---- */
-function roUI(){if(!ro)return;document.querySelectorAll('#app input').forEach(i=>{if(i.dataset.f!=='day')i.disabled=true});document.querySelectorAll('#app [data-a]').forEach(b=>{if(!['per','rc'].includes(b.dataset.a))b.style.display='none'})}
+function roUI(){if(!ro&&!cashier)return;const okA=ro?['per','rc']:['per','rc','add','sub','cam'];document.querySelectorAll('#app input').forEach(i=>{if(i.dataset.f!=='day'&&!(cashier&&i.id==='bc'))i.disabled=true});document.querySelectorAll('#app [data-a]').forEach(b=>{if(!okA.includes(b.dataset.a))b.style.display='none'})}
+var cashier=false;
 const _render=render;render=function(){_render();roUI()};
 render();
 </script></body></html>
